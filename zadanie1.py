@@ -5,7 +5,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import argparse
 
-structure_name = '4YWO'
 parser = argparse.ArgumentParser()
 parser.add_argument("--name", type=str, help="Structure name", required=False, default="4YWO")
 args = parser.parse_args()
