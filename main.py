@@ -16,10 +16,15 @@ def handle_arguments():
     parser=argparse.ArgumentParser()
     parser.add_argument('structure_id',type=str,help='id of structure. when no --load_from_disc specified, loads .\\structure_id.pdb or downloads from rcsb')
     parser.add_argument('--load_from_disc','-l',type=str,help='file to load structure from if it already exists, but relative path isn\'t: .\\structure_id.pdb')
-
-def load_from_RCSB(structure_id='430d'):
+    parser.add_argument('--output',type=str)
+    parser.add_argument('--oid',type=str,help='output structure id')
+    args=parser.parse_args()
+    return args
+def load_from_RCSB(structure_id='430d',filepath=None):
     pdb_list=PDBList()
-    fetched_structure=pdb_list.retrieve_pdb_file(structure_id,file_format='pdb')
+    if filepath is None:
+        fetched_structure=pdb_list.retrieve_pdb_file(structure_id,file_format='pdb')
+        filepath=fetched_structure
     parser=PDBParser()
     original_structure=parser.get_structure(structure_id,fetched_structure)
     return original_structure
@@ -54,14 +59,17 @@ def get_coarse_grain_structure(structure:Structure.Structure,representing_atoms_
                 new_residue=residue_coarse_grain(residue,representing_atoms_table)
                 new_chain.add(new_residue)
     return new_structure
-def save_structure(structure:Structure.Structure,file_name:str|None=None):
+def save_structure(structure:Structure.Structure,file_name:str|None=None,oid:str|None=None):
     """default fileneame: f'{structure.id}_coarse_grained.pdb'"""
+    if(oid is not None):
+        structure.id=oid
     if file_name is None:
         file_name=str(structure.id)+'_coarse_grained.pdb'
     pdb_io=Bio.PDB.PDBIO()
     pdb_io.set_structure(structure)
     pdb_io.save(file_name)
 
-original_structure=load_from_RCSB()
+args=handle_arguments()
+original_structure=load_from_RCSB(args.structure_id,args.load_from_disc)
 coarse_grained_structure=get_coarse_grain_structure(original_structure,representing_atoms_table)
-save_structure(coarse_grained_structure)
+save_structure(coarse_grained_structure,args.output,args.oid)

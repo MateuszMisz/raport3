@@ -4,6 +4,7 @@ from Bio.PDB import PDBParser,Superimposer,PDBIO
 from typing import Dict,List,Type,Any
 import argparse
 from copy import deepcopy
+import json
 def copy_res(residue:Residue.Residue,id,segid):
     new_residue=Residue.Residue(id,residue.resname,segid)
     for atom in residue:
@@ -20,10 +21,15 @@ def handle_arguments():
     parser.add_argument('input',type=str,help='file with coarse_grained structure')
     parser.add_argument('--output_file',type=str,help='output file_path. if no is given, pdb.file is printed on stdout')
     parser.add_argument('--oid',type=str,help='id of output structure. default is the prefix of input file +"_rebuild"')
-    parser.add_argument('--adenine_templates','-A',nargs='+',type=str,help='filepath to pdb file(s) with adenine template(s)')
-    parser.add_argument('--cytosine_templates','-C',nargs='+',type=str,help='filepath to pdb file(s) with cytosine template(s)')
-    parser.add_argument('--uracyl_templates','-U',nargs='+',type=str,help='filepath to pdb file(s) with uracyl template(s)')
-    parser.add_argument('--guanine_templates','-G',nargs='+',type=str,help='filepath to pdb file(s) with guanine template(s)')
+    parser.add_argument('--templates',type=json.loads,help='dict in json containing templates. format {name of residue or "backbone":[listoffilepaths]} many templates for one element can be given. each residue existing in the file must have at list one template. backbone template is also required. By default thera are templates for A,C,G,U,backbone. if argument is specified, you need to pass you cannot use default templates')
+    args=parser.parse_args()
+    if args.templates is None:
+        args.templates={'A':['templates\\adenine1.pdb'],'C':['templates\\cytozine1.pdb'],'G':['templates\\guanine1.pdb'],'U':['templates\\uracyl1.pdb'],'backbone':['templates\\backbone1.pdb']}
+    if args.oid is None:
+        stripped_name=args.input.split('.')
+        prefix=stripped_name[0]
+        args.oid=prefix+'_rebuild'
+    return args
 def get_first_residue_from_structure(structure:Structure)->Residue.Residue:
     for model in structure: 
         for chain in model:
@@ -120,10 +126,10 @@ class CoarseGrainRebuilder:
                     new_chain.add(new_residue)
         return rebuilded_structure
 if __name__=='__main__':
+    args=handle_arguments()
+    templates={'A':['templates\\adenine1.pdb'],'C':['templates\\cytozine1.pdb'],'G':['templates\\guanine1.pdb'],'U':['templates\\uracyl1.pdb'],'backbone':['templates\\backbone1.pdb']}
 
-    templates={'A':['adenine1.pdb'],'C':['cytozine1.pdb'],'G':['guanine1.pdb'],'U':['uracyl1.pdb'],'backbone':['backbone1.pdb']}
-
-    rebuilder=CoarseGrainRebuilder(templates)
+    rebuilder=CoarseGrainRebuilder(args.templates)
     #for key,value in rebuilder.templates.items():
     #    for model in value[0]:
     #        for chain in model:
@@ -131,9 +137,9 @@ if __name__=='__main__':
     #                for atom in res:
     #                    print(f'{atom.name},{res.resname},{res.id}')
     #        print('\n\n')       
-    structure=load_structure('430d_coarse_grained.pdb')            
-    new_structure=rebuilder.rebuild_structure(structure)
+    structure=load_structure(args.input)            
+    new_structure=rebuilder.rebuild_structure(structure,args.oid)
     saver=PDBIO()
     saver.set_structure(new_structure)
-    saver.save('testowa_odbudowa.pdb')
+    saver.save(args.output_file)
     print('dupa')
